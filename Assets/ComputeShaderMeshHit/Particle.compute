@@ -1,0 +1,25 @@
+#pragma kernel Update NUM_THREAD_X=1024
+
+#include "Particle.hlsl"
+
+RWStructuredBuffer<Particle> particleBuffer;
+float gravity;
+float deltaTime;
+
+[numthreads(NUM_THREAD_X,1,1)]
+void Update (uint3 id : SV_DispatchThreadID)
+{
+    uint num, stride;
+    particleBuffer.GetDimensions(num, stride);
+    if (num <= id.x) return;
+
+    Particle particle = particleBuffer[id.x];
+    float3 velocity = particle.velocity;
+
+    velocity.y += -gravity * deltaTime;
+
+    particle.position += velocity * deltaTime;
+    particle.velocity = velocity;
+
+    particleBuffer[id.x] = particle;
+}
