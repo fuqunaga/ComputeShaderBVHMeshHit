@@ -1,0 +1,125 @@
+#pragma kernel Update NUM_THREAD_X=1024
+
+#include "Particle.hlsl"
+
+struct Triangle 
+{
+    float3 pos0;
+    float3 pos1;
+    float3 pos2;
+    float3 normal;
+};
+
+
+RWStructuredBuffer<Particle> particleBuffer;
+StructuredBuffer<Triangle> triangleBuffer;
+float3 spawnBoundsMin;
+float3 spawnBoundsMax;
+float gravity;
+float bounceRate;
+float time; // for random
+float deltaTime;
+
+inline float random(float2 xy)
+{
+    return frac(sin(dot(xy ,float2(12.9898,78.233))) * 43758.5453);
+}
+
+inline float determinant(float3 v0, float3 v1, float3 v2)
+{
+    return determinant(float3x3(
+        v0.x, v1.x, v2.x,
+        v0.y, v1.y, v2.y,
+        v0.z, v1.z, v2.z
+    ));
+}
+
+// https://shikousakugo.wordpress.com/2012/06/27/ray-intersection-2/
+bool LineTriangleIntersection(float3 origin, float3 ray, out float rayScale, out float3 normal)
+{
+    uint num, stride;
+    triangleBuffer.GetDimensions(num, stride);
+
+    const float float_max = 10000000;
+    const float float_epsilon = 0.001;
+    
+    float min_t = 10000000;
+
+    for(uint i=0; i<num; ++i)
+    {
+        Triangle tri = triangleBuffer[i];
+        float dirDot = dot(tri.normal, ray);
+        if ( dirDot > 0 ) continue;
+
+        float3 edge0 = tri.pos1 - tri.pos0;
+        float3 edge1 = tri.pos2 - tri.pos0;
+
+        float d = determinant(edge0, edge1, -ray);
+        if ( d> float_epsilon)
+        {
+            float3 origin_from_pos0 = origin - tri.pos0;
+            float u = determinant(origin_from_pos0, edge1, -ray) / d;
+            float v = determinant(edge0, origin_from_pos0, -ray) / d;
+
+            if ( 0<=u && u<=1 && 0<=v && (u+v)<=1)
+            {
+                float t = determinant(edge0, edge1, origin_from_pos0) / d;
+                if ( t > 0 && t < min_t)
+                {
+                    min_t = t;
+                    normal = tri.normal;
+                }
+            }
+        }
+    }
+
+    bool hit = min_t != float_max;
+    rayScale = min_t;
+    return hit;
+}
+
+
+float3 Respawn(uint id)
+{
+    float3 rand3 = float3(
+        random(float2(id   * 0.01, time)),
+        random(float2(id+1 * 0.01, time)),
+        random(float2(id+2 * 0.01, time))
+    );
+
+    return lerp(spawnBoundsMin, spawnBoundsMax, rand3);
+}
+
+[numthreads(NUM_THREAD_X,1,1)]
+void Update (uint3 id : SV_DispatchThreadID)
+{
+    uint num, stride;
+    particleBuffer.GetDimensions(num, stride);
+    if (num <= id.x) return;
+
+    Particle particle = particleBuffer[id.x];
+    float3 velocity = particle.velocity;
+    velocity.y += -gravity * deltaTime;
+
+    float rayScale;
+    float3 normal;
+    if ( LineTriangleIntersection(particle.position, velocity, rayScale, normal) )
+    {
+        if ( deltaTime - rayScale > 0)
+        {
+            velocity = reflect(velocity, normal) * bounceRate;
+        }
+    }
+
+    float3 pos = particle.position;
+    pos += velocity * deltaTime;
+    if ( pos.y < -10){
+        pos = Respawn(id.x);
+        velocity = (0).xxx;
+    }
+
+    particle.position = pos;
+    particle.velocity = velocity;
+
+    particleBuffer[id.x] = particle;
+}
