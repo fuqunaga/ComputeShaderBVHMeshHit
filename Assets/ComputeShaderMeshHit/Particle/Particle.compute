@@ -1,6 +1,7 @@
 #pragma kernel Update NUM_THREAD_X=1024
 
 #include "Particle.hlsl"
+#include "BVH.hlsl"
 
 struct Triangle 
 {
