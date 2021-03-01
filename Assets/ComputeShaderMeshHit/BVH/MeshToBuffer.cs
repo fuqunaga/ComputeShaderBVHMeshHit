@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Unity.Collections;
@@ -7,6 +6,17 @@ using UnityEngine;
 
 public class MeshToBuffer : MonoBehaviour
 {
+    #region Type Define
+
+    public struct TriangleBounds
+    {
+        public Bounds bounds;
+        public int triangleIndex;
+    }
+
+    #endregion
+
+
     public List<GameObject> targets;
 
     public int splitTestCount = 1024;
@@ -14,7 +24,23 @@ public class MeshToBuffer : MonoBehaviour
     GraphicsBuffer bvhBuffer;
     GraphicsBuffer triangleBuffer;
 
-    BVHNode rootBVHNode;
+#if UNITY_EDITOR
+    [Header("Gizmos")]
+    public int gizmoBvhDepth;
+    public bool drawOnlyLeafNode;
+
+    List<BvhData> bvhDatasForDebug;
+    List<Triangle> trianglesForDebug;
+#endif
+
+    public GraphicsBuffer BvhBuffer
+    {
+        get
+        {
+            if (bvhBuffer == null) CreateBuffer();
+            return bvhBuffer;
+        }
+    }
 
     public GraphicsBuffer TriangleBuffer
     {
@@ -26,6 +52,8 @@ public class MeshToBuffer : MonoBehaviour
     }
 
 
+    #region Unity
+
     void OnDestroy()
     {
         if (triangleBuffer != null) triangleBuffer.Dispose();
@@ -33,53 +61,34 @@ public class MeshToBuffer : MonoBehaviour
     }
 
 
-    public int gizmoBVHDepth;
-
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.green;
-        DrawBVHNodeGizmo(rootBVHNode);
+        DrawBvhGizmo();
     }
 
-    void DrawBVHNodeGizmo(BVHNode node, int recursiveCount=0)
-    {
-        if (node == null) return;
+    #endregion
 
-        if ( recursiveCount == gizmoBVHDepth)
-        {
-            var bounds = node.bounds;
-            Gizmos.DrawWireCube(bounds.center, bounds.size);
-        }
-        else
-        {
-            DrawBVHNodeGizmo(node.left, recursiveCount + 1);
-            DrawBVHNodeGizmo(node.right, recursiveCount + 1);
-        }
-    }
 
 
     void CreateBuffer()
     {
         var triangles = CreateTriangles();
-
-        /*
-        triangleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, triangles.Count, Marshal.SizeOf<Triangle>());
-        triangleBuffer.SetData(triangles);
-        */
+        var rootNode = CreateBvh(triangles);
+        var (bvhDatas, triangleIndexes) = CreatteBvhDatas(rootNode);
 
 
-        rootBVHNode = CreateBVH(triangles);
-
-        var (bvhDatas, triangleIndexes) = CreatteBVHDatas(rootBVHNode);
-
-
-        bvhBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bvhDatas.Count, Marshal.SizeOf<BVHData>());
+        bvhBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bvhDatas.Count, Marshal.SizeOf<BvhData>());
         bvhBuffer.SetData(bvhDatas);
 
         var sortedTriangles = triangleIndexes.Select(idx => triangles[idx]).ToList();
 
         triangleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, sortedTriangles.Count, Marshal.SizeOf<Triangle>());
         triangleBuffer.SetData(sortedTriangles);
+
+#if UNITY_EDITOR
+        bvhDatasForDebug = bvhDatas;
+        trianglesForDebug = sortedTriangles;
+#endif
     }
 
 
@@ -116,9 +125,11 @@ public class MeshToBuffer : MonoBehaviour
     }
 
 
-    BVHNode CreateBVH(List<Triangle> triangles)
+    //List<TriangleBounds> triBounds;
+
+    BvhNode CreateBvh(List<Triangle> triangles)
     {
-        BVHNode rootNode;
+        BvhNode rootNode;
 
         var triBoundsArray = new NativeArray<TriangleBounds>(triangles.Count, Allocator.Temp);
         {
@@ -137,7 +148,8 @@ public class MeshToBuffer : MonoBehaviour
                 triBoundsArray[i] = triBounds;
             }
 
-            rootNode = CreateBVHInner(triBoundsArray);
+            rootNode = CreateBvhRecursive(triBoundsArray);
+            //triBounds = triBoundsArray.ToList();
         }
         triBoundsArray.Dispose();
 
@@ -146,11 +158,11 @@ public class MeshToBuffer : MonoBehaviour
 
 
 
-    private BVHNode CreateBVHInner(NativeSlice<TriangleBounds> triangleBoundsArray, int recursiveCount = 0)
+    private BvhNode CreateBvhRecursive(NativeSlice<TriangleBounds> triangleBoundsArray, int recursiveCount = 0)
     {
-        static BVHNode CreateBVHNodeLeaf(NativeSlice<TriangleBounds> triangleBoundsArray)
+        static BvhNode CreateBvhNodeLeaf(NativeSlice<TriangleBounds> triangleBoundsArray)
         {
-            return new BVHNode()
+            return new BvhNode()
             {
                 bounds = CalcBounds(triangleBoundsArray),
                 triangleIndexs = triangleBoundsArray.Select(n => n.triangleIndex).ToList()
@@ -175,7 +187,7 @@ public class MeshToBuffer : MonoBehaviour
             {
                 if (size[axis] < 0.001) continue;
 
-                var step = size[axis] / (splitTestCount / (recursiveCount+1));
+                var step = size[axis] / (splitTestCount / (recursiveCount + 1));
 
                 var stepStart = totalBounds.min[axis] + step;
                 var stepEnd = totalBounds.max[axis] - step;
@@ -206,34 +218,34 @@ public class MeshToBuffer : MonoBehaviour
         }
 
 
-        BVHNode ret;
+        BvhNode ret;
 
         // Not Split
         if (bestAxis < 0)
         {
-            ret = CreateBVHNodeLeaf(triangleBoundsArray);
+            ret = CreateBvhNodeLeaf(triangleBoundsArray);
         }
         // Calc child
         else
         {
             var leftBuf = new NativeArray<TriangleBounds>(triangleBoundsArray.Length, Allocator.Temp);
             var rightBuf = new NativeArray<TriangleBounds>(triangleBoundsArray.Length, Allocator.Temp);
-
-            var (left, right) = SplitLR(triangleBoundsArray, bestAxis, bestSplit, ref leftBuf, ref rightBuf);
-
-            var leftNode = CreateBVHInner(left, recursiveCount + 1);
-            var rightNode = CreateBVHInner(right, recursiveCount + 1);
-
-            var bounds = leftNode.bounds;
-            bounds.Encapsulate(rightNode.bounds);
-
-            ret = new BVHNode()
             {
-                bounds = bounds,
-                left = leftNode,
-                right = rightNode
-            };
+                var (left, right) = SplitLR(triangleBoundsArray, bestAxis, bestSplit, ref leftBuf, ref rightBuf);
 
+                var leftNode = CreateBvhRecursive(left, recursiveCount + 1);
+                var rightNode = CreateBvhRecursive(right, recursiveCount + 1);
+
+                var bounds = leftNode.bounds;
+                bounds.Encapsulate(rightNode.bounds);
+
+                ret = new BvhNode()
+                {
+                    bounds = bounds,
+                    left = leftNode,
+                    right = rightNode
+                };
+            }
             rightBuf.Dispose();
             leftBuf.Dispose();
         }
@@ -247,7 +259,7 @@ public class MeshToBuffer : MonoBehaviour
         var min = Vector3.one * float.MaxValue;
         var max = Vector3.one * float.MinValue;
 
-        for (var i = 1; i < triangleBoundsArray.Length; ++i)
+        for (var i = 0; i < triangleBoundsArray.Length; ++i)
         {
             var bounds = triangleBoundsArray[i].bounds;
             min = Vector3.Min(min, bounds.min);
@@ -275,7 +287,7 @@ public class MeshToBuffer : MonoBehaviour
         var leftCount = 0;
         var rightCount = 0;
 
-        for(var i=0; i<triBoundsArray.Length; ++i)
+        for (var i = 0; i < triBoundsArray.Length; ++i)
         {
             var tb = triBoundsArray[i];
 
@@ -294,26 +306,30 @@ public class MeshToBuffer : MonoBehaviour
 
 
 
-    private (List<BVHData>, List<int>) CreatteBVHDatas(BVHNode node)
+    private (List<BvhData>, List<int>) CreatteBvhDatas(BvhNode node)
     {
-        var datas = new List<BVHData>();
+        var datas = new List<BvhData>();
         var triangleIndexes = new List<int>();
 
-        CreatteBVHDatasInner(node, datas, triangleIndexes);
+        CreatteBvhDatasRecursive(node, datas, triangleIndexes);
 
         return (datas, triangleIndexes);
 
     }
 
-    void CreatteBVHDatasInner(BVHNode node, List<BVHData> datas,  List<int> triangleIndexes)
+    void CreatteBvhDatasRecursive(BvhNode node, List<BvhData> datas, List<int> triangleIndexes)
     {
-        var data = new BVHData()
+        var data = new BvhData()
         {
             min = node.bounds.min,
-            max = node.bounds.max
+            max = node.bounds.max,
+            leftIdx = -1,
+            rightIdx = -1,
+            triangleIdx = -1,
+            triangleCount = 0
         };
 
-        if ( node.IsLeaf)
+        if (node.IsLeaf)
         {
             var idx = triangleIndexes.Count;
             triangleIndexes.AddRange(node.triangleIndexs);
@@ -326,16 +342,57 @@ public class MeshToBuffer : MonoBehaviour
         else
         {
             data.triangleIdx = -1;
-            var dataIdx = datas.Count;
 
-            datas.Add(default);
+            var dataIdx = datas.Count;
+            datas.Add(default); // reserve my data idx
+
             data.leftIdx = datas.Count;
-            CreatteBVHDatasInner(node.left, datas, triangleIndexes);
+            CreatteBvhDatasRecursive(node.left, datas, triangleIndexes);
 
             data.rightIdx = datas.Count;
-            CreatteBVHDatasInner(node.right, datas, triangleIndexes);
+            CreatteBvhDatasRecursive(node.right, datas, triangleIndexes);
 
             datas[dataIdx] = data;
         }
     }
+
+
+    #region Debug
+
+    void DrawBvhGizmo(int idx = 0, int recursiveCount = 0)
+    {
+        if (idx < 0 || bvhDatasForDebug.Count <= idx) return;
+
+        var data = bvhDatasForDebug[idx];
+
+        if (recursiveCount == gizmoBvhDepth)
+        {
+            if (data.IsLeaf)
+            {
+                Gizmos.color = Color.red;
+                for (var i = 0; i < data.triangleCount; ++i)
+                {
+                    var tri = trianglesForDebug[i + data.triangleIdx];
+                    Gizmos.DrawLine(tri.pos0, tri.pos1);
+                    Gizmos.DrawLine(tri.pos0, tri.pos2);
+                    Gizmos.DrawLine(tri.pos1, tri.pos2);
+                }
+            }
+
+            if (!drawOnlyLeafNode || data.IsLeaf)
+            {
+                var bounds = new Bounds() { min = data.min, max = data.max };
+
+                Gizmos.color = data.IsLeaf ? Color.cyan : Color.green;
+                Gizmos.DrawWireCube(bounds.center, bounds.size);
+            }
+        }
+        else if (!data.IsLeaf)
+        {
+            DrawBvhGizmo(data.leftIdx, recursiveCount + 1);
+            DrawBvhGizmo(data.rightIdx, recursiveCount + 1);
+        }
+    }
+
+    #endregion
 }

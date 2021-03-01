@@ -17,10 +17,17 @@ Shader "Custom/Particle"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl" 
         #include "Particle.hlsl"
 
+        struct v2g
+        {
+            float4 pos : SV_POSITION;
+            float4 color : TEXCOORD;
+        };
+
         struct g2f 
         {
             float4 pos : SV_POSITION;
-            float2 uv : TEXCOORD;
+            float2 uv : TEXCOORD0;
+            float4 color : TEXCOORD1;
         };
 
 
@@ -28,16 +35,21 @@ Shader "Custom/Particle"
         float _Size;
         float4 _Color;
 
-        float4 vert(uint iid : SV_INSTANCEID) : POSITION
+        v2g vert(uint iid : SV_INSTANCEID)
         {
             Particle particle = _ParticleBuffer[iid];
-            return float4(particle.position, 1);
+
+            v2g Out;
+            Out.pos = float4(particle.position, 1);
+            Out.color = particle.color;
+            return Out;
         }
 
         [maxvertexcount(4)]
-        void geom(point float4 p[1] : POSITION, inout TriangleStream<g2f> outStream)
+        void geom(point v2g In[1], inout TriangleStream<g2f> outStream)
         {
-            float3 center = p[0].xyz;
+            float3 center = In[0].pos.xyz;
+            float4 color = In[0].color;
 
             float3 up = float3(0, 1, 0);
             float3 look = _WorldSpaceCameraPos - center;
@@ -65,30 +77,33 @@ Shader "Custom/Particle"
 
             Out.pos = TransformWorldToHClip(v[0]);
             Out.uv = uv[0];
+            Out.color = color;
             outStream.Append(Out);
 
             Out.pos = TransformWorldToHClip(v[1]);
             Out.uv = uv[1];
+            Out.color = color;
             outStream.Append(Out);
 
             Out.pos = TransformWorldToHClip(v[2]);
             Out.uv = uv[2];
+            Out.color = color;
             outStream.Append(Out);
 
             Out.pos = TransformWorldToHClip(v[3]);
             Out.uv = uv[3];
+            Out.color = color;
             outStream.Append(Out);
         }           
 
-
+                    
         sampler2D _MainTex;
 
         float4 frag (g2f In) : SV_Target
         {
-            return tex2D(_MainTex, In.uv) * _Color;;
+            return tex2D(_MainTex, In.uv) * In.color * _Color;;
         }
-
-
+        
         ENDHLSL
 
         Pass

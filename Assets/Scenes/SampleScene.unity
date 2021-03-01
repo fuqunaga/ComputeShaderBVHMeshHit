@@ -140,7 +140,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &432840064
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -155,7 +155,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: 77fd130945d99a8459a49074464dc947, type: 3}
   meshToBuffer: {fileID: 1686470373}
-  particleCount: 200000
+  particleCount: 500000
   bounceRate: 0.4
   bounds:
     m_Center: {x: 0, y: 15, z: 0}
@@ -207,7 +207,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &465599563
 Transform:
   m_ObjectHideFlags: 0
@@ -349,7 +349,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &968628355
 Transform:
   m_ObjectHideFlags: 0
@@ -491,7 +491,8 @@ MonoBehaviour:
   targets:
   - {fileID: 1409949438}
   splitTestCount: 64
-  gizmoBVHDepth: 0
+  gizmoBvhDepth: 0
+  drawOnlyLeafNode: 0
 --- !u!1 &1687258581
 GameObject:
   m_ObjectHideFlags: 0

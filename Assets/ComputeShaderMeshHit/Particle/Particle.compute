@@ -1,19 +1,10 @@
 #pragma kernel Update NUM_THREAD_X=1024
 
 #include "Particle.hlsl"
-#include "BVH.hlsl"
-
-struct Triangle 
-{
-    float3 pos0;
-    float3 pos1;
-    float3 pos2;
-    float3 normal;
-};
+#include "Bvh.hlsl"
 
 
 RWStructuredBuffer<Particle> particleBuffer;
-StructuredBuffer<Triangle> triangleBuffer;
 float3 spawnBoundsMin;
 float3 spawnBoundsMax;
 float gravity;
@@ -25,60 +16,6 @@ inline float random(float2 xy)
 {
     return frac(sin(dot(xy ,float2(12.9898,78.233))) * 43758.5453);
 }
-
-inline float determinant(float3 v0, float3 v1, float3 v2)
-{
-    return determinant(float3x3(
-        v0.x, v1.x, v2.x,
-        v0.y, v1.y, v2.y,
-        v0.z, v1.z, v2.z
-    ));
-}
-
-// https://shikousakugo.wordpress.com/2012/06/27/ray-intersection-2/
-bool LineTriangleIntersection(float3 origin, float3 ray, out float rayScale, out float3 normal)
-{
-    uint num, stride;
-    triangleBuffer.GetDimensions(num, stride);
-
-    const float float_max = 10000000;
-    const float float_epsilon = 0.001;
-    
-    float min_t = 10000000;
-
-    for(uint i=0; i<num; ++i)
-    {
-        Triangle tri = triangleBuffer[i];
-        float dirDot = dot(tri.normal, ray);
-        if ( dirDot > 0 ) continue;
-
-        float3 edge0 = tri.pos1 - tri.pos0;
-        float3 edge1 = tri.pos2 - tri.pos0;
-
-        float d = determinant(edge0, edge1, -ray);
-        if ( d> float_epsilon)
-        {
-            float3 origin_from_pos0 = origin - tri.pos0;
-            float u = determinant(origin_from_pos0, edge1, -ray) / d;
-            float v = determinant(edge0, origin_from_pos0, -ray) / d;
-
-            if ( 0<=u && u<=1 && 0<=v && (u+v)<=1)
-            {
-                float t = determinant(edge0, edge1, origin_from_pos0) / d;
-                if ( t > 0 && t < min_t)
-                {
-                    min_t = t;
-                    normal = tri.normal;
-                }
-            }
-        }
-    }
-
-    bool hit = min_t != float_max;
-    rayScale = min_t;
-    return hit;
-}
-
 
 float3 Respawn(uint id)
 {
@@ -99,21 +36,42 @@ void Update (uint3 id : SV_DispatchThreadID)
     if (num <= id.x) return;
 
     Particle particle = particleBuffer[id.x];
+    float3 pos = particle.position;
     float3 velocity = particle.velocity;
+
+    // Calc velocity
     velocity.y += -gravity * deltaTime;
 
+    float3 step = velocity * deltaTime;
+
+    // Check hit
+#if 0
     float rayScale;
     float3 normal;
-    if ( LineTriangleIntersection(particle.position, velocity, rayScale, normal) )
+    if ( TraverseTriangles(particle.position, step, rayScale, normal) )
     {
-        if ( deltaTime - rayScale > 0)
+        if ( rayScale <= 1.0)
         {
             velocity = reflect(velocity, normal) * bounceRate;
         }
     }
+#endif
 
-    float3 pos = particle.position;
-    pos += velocity * deltaTime;
+
+#if 1
+    float rayScale;
+    float3 normal;
+    if ( TraverseBvh(pos, step, rayScale, normal) )
+    {
+        if ( rayScale <= 1.0)
+        {
+            velocity = reflect(velocity, normal) * bounceRate;
+        }
+    }
+#endif
+
+    // Respawn
+    pos += step;
     if ( pos.y < -10){
         pos = Respawn(id.x);
         velocity = (0).xxx;

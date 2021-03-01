@@ -2,17 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-public struct TriangleBounds
+public class BvhNode
 {
     public Bounds bounds;
-    public int triangleIndex;
-}
-
-public class BVHNode
-{
-    public Bounds bounds;
-    public BVHNode left;
-    public BVHNode right;
+    public BvhNode left;
+    public BvhNode right;
 
     public List<int> triangleIndexs;
 
@@ -20,7 +14,7 @@ public class BVHNode
 }
 
 
-public struct BVHData
+public struct BvhData
 {
     public Vector3 min;
     public Vector3 max;
@@ -30,4 +24,6 @@ public struct BVHData
 
     public int triangleIdx; // -1 if data is not leaf
     public int triangleCount;
+
+    public bool IsLeaf => triangleIdx >= 0;
 }

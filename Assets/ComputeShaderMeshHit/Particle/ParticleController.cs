@@ -8,6 +8,7 @@ public class ParticleController : MonoBehaviour
     {
         public static string KernelUpdate = "Update";
         public static int particleBuffer = Shader.PropertyToID("particleBuffer");
+        public static int BvhBuffer = Shader.PropertyToID("BvhBuffer");
         public static int triangleBuffer = Shader.PropertyToID("triangleBuffer");
         public static int spawnBoundsMin = Shader.PropertyToID("spawnBoundsMin");
         public static int spawnBoundsMax = Shader.PropertyToID("spawnBoundsMax");
@@ -65,6 +66,7 @@ public class ParticleController : MonoBehaviour
             datas[i] = new Particle()
             {
                 poision = pos,
+                color = Color.white
             };
         }
 
@@ -78,6 +80,7 @@ public class ParticleController : MonoBehaviour
         var kernel = computeShader.FindKernel(ShaderParam.KernelUpdate);
 
         computeShader.SetBuffer(kernel, ShaderParam.particleBuffer, particleBuffer);
+        computeShader.SetBuffer(kernel, ShaderParam.BvhBuffer, meshToBuffer.BvhBuffer);
         computeShader.SetBuffer(kernel, ShaderParam.triangleBuffer, meshToBuffer.TriangleBuffer);
         computeShader.SetVector(ShaderParam.spawnBoundsMin, bounds.min);
         computeShader.SetVector(ShaderParam.spawnBoundsMax, bounds.max);
