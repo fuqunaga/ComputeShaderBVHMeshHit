@@ -48,7 +48,7 @@ void Update (uint3 id : SV_DispatchThreadID)
 #if 0
     float rayScale;
     float3 normal;
-    if ( TraverseTriangles(particle.position, step, rayScale, normal) )
+    if ( LineTriangleIntersectionAll(particle.position, step, rayScale, normal) )
     {
         if ( rayScale <= 1.0)
         {

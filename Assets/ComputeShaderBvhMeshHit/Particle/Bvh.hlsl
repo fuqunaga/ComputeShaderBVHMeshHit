@@ -71,14 +71,10 @@ inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 ray, ou
     return false;
 }
 
-bool TraverseTriangles(float3 origin, float3 ray, out float rayScale, out float3 normal)
+bool LineTriangleIntersectionAll(float3 origin, float3 ray, out float rayScale, out float3 normal)
 {
     uint num, stride;
     triangleBuffer.GetDimensions(num, stride);
-
-    //const float float_epsilon = 0.001;
-    
-    //float min_t = 10000000;
 
     rayScale = BVH_FLT_MAX;
     for(uint i=0; i<num; ++i)
@@ -94,32 +90,6 @@ bool TraverseTriangles(float3 origin, float3 ray, out float rayScale, out float3
                 normal = tri.normal;
             }
         }
-
-
-        //Triangle tri = triangleBuffer[i];
-        //float dirDot = dot(tri.normal, ray);
-        //if ( dirDot > 0 ) continue;
-
-        //float3 edge0 = tri.pos1 - tri.pos0;
-        //float3 edge1 = tri.pos2 - tri.pos0;
-
-        //float d = determinant(edge0, edge1, -ray);
-        //if ( d> float_epsilon)
-        //{
-        //    float3 origin_from_pos0 = origin - tri.pos0;
-        //    float u = determinant(origin_from_pos0, edge1, -ray) / d;
-        //    float v = determinant(edge0, origin_from_pos0, -ray) / d;
-
-        //    if ( 0<=u && u<=1 && 0<=v && (u+v)<=1)
-        //    {
-        //        float t = determinant(edge0, edge1, origin_from_pos0) / d;
-        //        if ( t > 0 && t < min_t)
-        //        {
-        //            min_t = t;
-        //            normal = tri.normal;
-        //        }
-        //    }
-        //}
     }
 
     return rayScale != BVH_FLT_MAX;
@@ -127,7 +97,7 @@ bool TraverseTriangles(float3 origin, float3 ray, out float rayScale, out float3
 
 // Line AABB
 // http://marupeke296.com/COL_3D_No18_LineAndAABB.html
-bool LineAABBIntersection(float3 origin, float3 ray, BvhData data)
+bool LineAABBIntersection(float3 origin, float3 rayStep, BvhData data)
 {
     float3 aabbMin = data.min;
     float3 aabbMax = data.max;
@@ -137,7 +107,7 @@ bool LineAABBIntersection(float3 origin, float3 ray, BvhData data)
 
     for(int axis = 0; axis<3; ++axis)
     {
-        float rayOnAxis = ray[axis];
+        float rayOnAxis = rayStep[axis];
         float originOnAxis = origin[axis];
         float minOnAxis = aabbMin[axis];
         float maxOnAxis = aabbMax[axis];
@@ -147,8 +117,9 @@ bool LineAABBIntersection(float3 origin, float3 ray, BvhData data)
         }
         else
         {
-            float t0 = (minOnAxis - originOnAxis) / rayOnAxis;
-            float t1 = (maxOnAxis - originOnAxis) / rayOnAxis;
+            float rayOnAxisInv = 1.0 / rayOnAxis;
+            float t0 = (minOnAxis - originOnAxis) * rayOnAxisInv;
+            float t1 = (maxOnAxis - originOnAxis) * rayOnAxisInv;
 
             float tMin = min(t0, t1);
             float tMax = max(t0, t1);
@@ -156,7 +127,7 @@ bool LineAABBIntersection(float3 origin, float3 ray, BvhData data)
             tNear = max(tNear, tMin);
             tFar  = min(tFar, tMax);
 
-            if (tFar < 0.0 || tNear > tFar) return false;
+            if (tFar < 0.0 || tFar < tNear || 1.0 < tNear) return false;
         }
     }
 
@@ -164,7 +135,7 @@ bool LineAABBIntersection(float3 origin, float3 ray, BvhData data)
 }
 
 // Line Bvh
-bool TraverseBvh(float3 origin, float3 ray, out float rayScale, out float3 normal)
+bool TraverseBvh(float3 origin, float3 rayStep, out float rayScale, out float3 normal)
 {
     int stack[BVH_STACK_SIZE];
 
@@ -179,7 +150,7 @@ bool TraverseBvh(float3 origin, float3 ray, out float rayScale, out float3 norma
         int BvhIdx = stack[stackIdx];
         BvhData data = BvhBuffer[BvhIdx];
 
-        if ( LineAABBIntersection(origin, ray, data) )
+        if ( LineAABBIntersection(origin, rayStep, data) )
          {
             // Branch node
             if (data.triangleIdx < 0)
@@ -197,7 +168,7 @@ bool TraverseBvh(float3 origin, float3 ray, out float rayScale, out float3 norma
                     Triangle tri = triangleBuffer[i + data.triangleIdx];
 
                     float tmpRayScale;
-                    if (LineTriangleIntersection(tri, origin, ray, tmpRayScale))
+                    if (LineTriangleIntersection(tri, origin, rayStep, tmpRayScale))
                     {
                         if (tmpRayScale < rayScale)
                         {
