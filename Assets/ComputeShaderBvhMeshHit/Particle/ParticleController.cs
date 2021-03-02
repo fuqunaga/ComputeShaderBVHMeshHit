@@ -66,7 +66,8 @@ public class ParticleController : MonoBehaviour
             datas[i] = new Particle()
             {
                 poision = pos,
-                color = Color.white
+                color = Color.white,
+                randState = (uint)i+1 // not allow 0
             };
         }
 

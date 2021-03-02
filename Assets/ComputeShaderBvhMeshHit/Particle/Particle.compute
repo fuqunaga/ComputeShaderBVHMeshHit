@@ -12,17 +12,39 @@ float bounceRate;
 float time; // for random
 float deltaTime;
 
-inline float random(float2 xy)
+
+
+float xorShift(uint idx)
 {
-    return frac(sin(dot(xy ,float2(12.9898,78.233))) * 43758.5453);
+    Particle particle = particleBuffer[idx];
+    uint state = particle.randState;
+
+    state ^= (state << 13); 
+    state ^= (state >> 17);
+    state ^= (state << 5);
+
+    particle.randState = state;
+    particleBuffer[idx] = particle;
+
+
+    const uint uint_max = 4294967295;
+    return (float)state / uint_max;
 }
 
-float3 Respawn(uint id)
+float3 Respawn(uint idx)
 {
+    /*
     float3 rand3 = float3(
         random(float2(id   * 0.01, time)),
         random(float2(id+1 * 0.01, time)),
         random(float2(id+2 * 0.01, time))
+    );
+    */
+
+    float3 rand3 = float3(
+        xorShift(idx),
+        xorShift(idx),
+        xorShift(idx)
     );
 
     return lerp(spawnBoundsMin, spawnBoundsMax, rand3);
