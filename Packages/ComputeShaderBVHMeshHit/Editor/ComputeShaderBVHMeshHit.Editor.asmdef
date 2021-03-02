@@ -1,0 +1,18 @@
+{
+    "name": "ComputeShaderBVHMeshHit.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:dac0c9653c7864d469afe7299c5e04e6"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

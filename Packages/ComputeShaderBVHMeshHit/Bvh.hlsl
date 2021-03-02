@@ -26,7 +26,7 @@ struct Triangle
 
 
 
-StructuredBuffer<BvhData> BvhBuffer;
+StructuredBuffer<BvhData> bvhBuffer;
 StructuredBuffer<Triangle> triangleBuffer;
 
 inline float determinant(float3 v0, float3 v1, float3 v2)
@@ -40,31 +40,31 @@ inline float determinant(float3 v0, float3 v1, float3 v2)
 
 // Line triangle
 // https://shikousakugo.wordpress.com/2012/06/27/ray-intersection-2/
-inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 ray, out float rayScale)
+inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 rayStep, out float rayScale)
 {
     rayScale = BVH_FLT_MAX;
 
     float3 normal = tri.normal;
-    float dirDot = dot(normal, ray);
+    float dirDot = dot(normal, rayStep);
     if ( dirDot > 0 ) return false;
 
     float3 origin_from_pos0 = origin - tri.pos0;
     if(dot(origin_from_pos0, normal) < 0 ) return false;
 
-    float3 ray_end_from_pos0 = origin_from_pos0 + ray;
-    if(dot(ray_end_from_pos0, normal) > 0 ) return false;
+    float3 rayStep_end_from_pos0 = origin_from_pos0 + rayStep;
+    if(dot(rayStep_end_from_pos0, normal) > 0 ) return false;
 
     float3 edge0 = tri.pos1 - tri.pos0;
     float3 edge1 = tri.pos2 - tri.pos0;
 
     const float float_epsilon = 0.001;
 
-    float d = determinant(edge0, edge1, -ray);
+    float d = determinant(edge0, edge1, -rayStep);
     if ( d> float_epsilon)
     {
         float dInv = 1.0 / d;
-        float u = determinant(origin_from_pos0, edge1, -ray) * dInv;
-        float v = determinant(edge0, origin_from_pos0, -ray) * dInv;
+        float u = determinant(origin_from_pos0, edge1, -rayStep) * dInv;
+        float v = determinant(edge0, origin_from_pos0, -rayStep) * dInv;
 
         if ( 0<=u && u<=1 && 0<=v && (u+v)<=1)
         {
@@ -80,7 +80,7 @@ inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 ray, ou
     return false;
 }
 
-bool LineTriangleIntersectionAll(float3 origin, float3 ray, out float rayScale, out float3 normal)
+bool LineTriangleIntersectionAll(float3 origin, float3 rayStep, out float rayScale, out float3 normal)
 {
     uint num, stride;
     triangleBuffer.GetDimensions(num, stride);
@@ -91,7 +91,7 @@ bool LineTriangleIntersectionAll(float3 origin, float3 ray, out float rayScale, 
         Triangle tri = triangleBuffer[i];
 
         float tmpRayScale;
-        if (LineTriangleIntersection(tri, origin, ray, tmpRayScale))
+        if (LineTriangleIntersection(tri, origin, rayStep, tmpRayScale))
         {
             if ( tmpRayScale < rayScale)
             {
@@ -158,7 +158,7 @@ bool TraverseBvh(float3 origin, float3 rayStep, out float rayScale, out float3 n
     {
         stackIdx--;
         int BvhIdx = stack[stackIdx];
-        BvhData data = BvhBuffer[BvhIdx];
+        BvhData data = bvhBuffer[BvhIdx];
 
         if ( LineAABBIntersection(origin, rayStep, data) )
          {

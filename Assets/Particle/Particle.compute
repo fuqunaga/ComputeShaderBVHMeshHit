@@ -1,18 +1,19 @@
-#pragma kernel Update NUM_THREAD_X=1024
+#pragma kernel Update NUM_THREAD_X=256
 
 #include "Particle.hlsl"
-#include "Bvh.hlsl"
+#include "Packages/ga.fuquna.computeshaderbvhmeshhit/Bvh.hlsl"
 
+
+//#define CHECK_HIT_TRIANGLE_ALL 1
 
 RWStructuredBuffer<Particle> particleBuffer;
 float3 spawnBoundsMin;
 float3 spawnBoundsMax;
 float gravity;
+float damping;
 float bounceRate;
 float time; // for random
 float deltaTime;
-
-
 
 float xorShift(uint idx)
 {
@@ -33,14 +34,6 @@ float xorShift(uint idx)
 
 float3 Respawn(uint idx)
 {
-    /*
-    float3 rand3 = float3(
-        random(float2(id   * 0.01, time)),
-        random(float2(id+1 * 0.01, time)),
-        random(float2(id+2 * 0.01, time))
-    );
-    */
-
     float3 rand3 = float3(
         xorShift(idx),
         xorShift(idx),
@@ -63,34 +56,23 @@ void Update (uint3 id : SV_DispatchThreadID)
 
     // Calc velocity
     velocity.y += -gravity * deltaTime;
+    velocity *= pow(abs(damping), deltaTime);
 
     float3 step = velocity * deltaTime;
 
     // Check hit
-#if 0
     float rayScale;
     float3 normal;
+#ifdef CHECK_HIT_TRIANGLE_ALL
     if ( LineTriangleIntersectionAll(particle.position, step, rayScale, normal) )
-    {
-        if ( rayScale <= 1.0)
-        {
-            velocity = reflect(velocity, normal) * bounceRate;
-        }
-    }
-#endif
-
-
-#if 1
-    float rayScale;
-    float3 normal;
+#else
     if ( TraverseBvh(pos, step, rayScale, normal) )
-    {
-        if ( rayScale <= 1.0)
-        {
-            velocity = reflect(velocity, normal) * bounceRate;
-        }
-    }
 #endif
+    {
+        velocity = reflect(velocity, normal) * bounceRate;
+        step = velocity * deltaTime;
+    }
+
 
     // Respawn
     pos += step;
