@@ -42,8 +42,17 @@ inline float determinant(float3 v0, float3 v1, float3 v2)
 // https://shikousakugo.wordpress.com/2012/06/27/ray-intersection-2/
 inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 ray, out float rayScale)
 {
-    float dirDot = dot(tri.normal, ray);
+    rayScale = BVH_FLT_MAX;
+
+    float3 normal = tri.normal;
+    float dirDot = dot(normal, ray);
     if ( dirDot > 0 ) return false;
+
+    float3 origin_from_pos0 = origin - tri.pos0;
+    if(dot(origin_from_pos0, normal) < 0 ) return false;
+
+    float3 ray_end_from_pos0 = origin_from_pos0 + ray;
+    if(dot(ray_end_from_pos0, normal) > 0 ) return false;
 
     float3 edge0 = tri.pos1 - tri.pos0;
     float3 edge1 = tri.pos2 - tri.pos0;
@@ -53,13 +62,13 @@ inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 ray, ou
     float d = determinant(edge0, edge1, -ray);
     if ( d> float_epsilon)
     {
-        float3 origin_from_pos0 = origin - tri.pos0;
-        float u = determinant(origin_from_pos0, edge1, -ray) / d;
-        float v = determinant(edge0, origin_from_pos0, -ray) / d;
+        float dInv = 1.0 / d;
+        float u = determinant(origin_from_pos0, edge1, -ray) * dInv;
+        float v = determinant(edge0, origin_from_pos0, -ray) * dInv;
 
         if ( 0<=u && u<=1 && 0<=v && (u+v)<=1)
         {
-            float t = determinant(edge0, edge1, origin_from_pos0) / d;
+            float t = determinant(edge0, edge1, origin_from_pos0) * dInv;
             if ( t > 0 )
             {
                 rayScale = t;
@@ -135,6 +144,7 @@ bool LineAABBIntersection(float3 origin, float3 rayStep, BvhData data)
 }
 
 // Line Bvh
+// http://raytracey.blogspot.com/2016/01/gpu-path-tracing-tutorial-3-take-your.html
 bool TraverseBvh(float3 origin, float3 rayStep, out float rayScale, out float3 normal)
 {
     int stack[BVH_STACK_SIZE];
