@@ -156,7 +156,7 @@ MonoBehaviour:
   computeShader: {fileID: 7200000, guid: 77fd130945d99a8459a49074464dc947, type: 3}
   meshToBuffer: {fileID: 1686470373}
   particleCount: 3000000
-  bounceRate: 0.2
+  bounceRate: 0.3
   bounds:
     m_Center: {x: 0, y: 15, z: 0}
     m_Extent: {x: 2, y: 4, z: 2}

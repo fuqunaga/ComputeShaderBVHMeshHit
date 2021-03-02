@@ -63,7 +63,10 @@ public class MeshToBuffer : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        DrawBvhGizmo();
+        if (bvhDatasForDebug != null)
+        {
+            DrawBvhGizmo();
+        }
     }
 
     #endregion
