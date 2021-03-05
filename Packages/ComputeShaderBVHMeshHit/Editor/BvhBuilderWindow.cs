@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,6 +9,8 @@ namespace ComputeShaderBvhMeshHit.Editor
     {
         public GameObject meshObjectRoot;
         public int splitCount = 64;
+
+        string lastPath;
 
         [MenuItem("Window/BvhBuilder")]
         static void Init()
@@ -28,19 +31,24 @@ namespace ComputeShaderBvhMeshHit.Editor
             GUI.enabled = (meshObjectRoot != null) && (splitCount > 0);
             if (GUILayout.Button("Build"))
             {
-                var path = EditorUtility.SaveFilePanel("Save Bvh asset", "Assets", "bvhAsset", "asset");
-                path = "Assets" + path.Substring(Application.dataPath.Length);
+                var path = EditorUtility.SaveFilePanel("Save Bvh asset", Path.GetDirectoryName(lastPath) ?? "Assets", Path.GetFileName(lastPath) ?? "bvhAsset", "asset");
                 if (!string.IsNullOrEmpty(path))
                 {
+                    lastPath = path;
+                    var relativePath = "Assets" + path.Substring(Application.dataPath.Length);
 
                     var (bvhDatas, triangles) = BvhBuilder.BuildBvh(meshObjectRoot, splitCount);
 
-                    var bvhAsset = CreateInstance<BvhAsset>();
+                    var bvhAsset = AssetDatabase.LoadAssetAtPath<BvhAsset>(relativePath);
+                    if (bvhAsset == null)
+                    {
+                        bvhAsset = CreateInstance<BvhAsset>();
+                        AssetDatabase.CreateAsset(bvhAsset, relativePath);
+                    }
                     bvhAsset.bvhDatas = bvhDatas;
                     bvhAsset.triangles = triangles;
 
-                    AssetDatabase.CreateAsset(bvhAsset, path);
-
+                    AssetDatabase.Refresh();
                     EditorGUIUtility.PingObject(bvhAsset);
                 }
             }
