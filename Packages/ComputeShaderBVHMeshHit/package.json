@@ -12,6 +12,6 @@
     "email": "fukhid@gmail.com",
     "url": "https://fuquna.ga"
   },
-  "description": "ComputeShader implementation of BVH-based hit checking for meshes.",
+  "description": "ComputeShader implementation of BVH(Bounding Volume Hierarchy) based mesh hit checking.",
   "type": "library"
 }
