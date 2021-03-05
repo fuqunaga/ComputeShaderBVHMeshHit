@@ -16,7 +16,7 @@ struct BvhData
     int triangleCount;
 };
 
-struct Triangle 
+struct BvhTriangle 
 {
     float3 pos0;
     float3 pos1;
@@ -27,7 +27,7 @@ struct Triangle
 
 
 StructuredBuffer<BvhData> bvhBuffer;
-StructuredBuffer<Triangle> triangleBuffer;
+StructuredBuffer<BvhTriangle> triangleBuffer;
 
 inline float determinant(float3 v0, float3 v1, float3 v2)
 {
@@ -40,7 +40,7 @@ inline float determinant(float3 v0, float3 v1, float3 v2)
 
 // Line triangle
 // https://shikousakugo.wordpress.com/2012/06/27/ray-intersection-2/
-inline bool LineTriangleIntersection(Triangle tri, float3 origin, float3 rayStep, out float rayScale)
+inline bool LineTriangleIntersection(BvhTriangle tri, float3 origin, float3 rayStep, out float rayScale)
 {
     rayScale = BVH_FLT_MAX;
 
@@ -88,7 +88,7 @@ bool LineTriangleIntersectionAll(float3 origin, float3 rayStep, out float raySca
     rayScale = BVH_FLT_MAX;
     for(uint i=0; i<num; ++i)
     {
-        Triangle tri = triangleBuffer[i];
+        BvhTriangle tri = triangleBuffer[i];
 
         float tmpRayScale;
         if (LineTriangleIntersection(tri, origin, rayStep, tmpRayScale))
@@ -175,7 +175,7 @@ bool TraverseBvh(float3 origin, float3 rayStep, out float rayScale, out float3 n
             {
                 for(int i=0; i<data.triangleCount; ++i)
                 {
-                    Triangle tri = triangleBuffer[i + data.triangleIdx];
+                    BvhTriangle tri = triangleBuffer[i + data.triangleIdx];
 
                     float tmpRayScale;
                     if (LineTriangleIntersection(tri, origin, rayStep, tmpRayScale))

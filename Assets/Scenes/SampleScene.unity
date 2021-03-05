@@ -155,7 +155,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: 77fd130945d99a8459a49074464dc947, type: 3}
   bvhAsset: {fileID: 11400000, guid: 2c608b7122767e447b74bcc4e0a6bfb0, type: 2}
-  particleCount: 3000000
+  particleCount: 2000000
   bounceRate: 0.3
   spawnBounds:
     m_Center: {x: 0, y: 30, z: 0}
