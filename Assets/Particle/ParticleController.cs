@@ -5,15 +5,13 @@ using UnityEngine;
 
 namespace ComputeShaderBvhMeshHit.Sample
 {
-
+    [RequireComponent(typeof(BvhHelperBehaviour))]
     public class ParticleController : MonoBehaviour
     {
         static class ShaderParam
         {
             public static string KernelUpdate = "Update";
             public static int particleBuffer = Shader.PropertyToID("particleBuffer");
-            public static int bvhBuffer = Shader.PropertyToID("bvhBuffer");
-            public static int triangleBuffer = Shader.PropertyToID("triangleBuffer");
             public static int spawnBoundsMin = Shader.PropertyToID("spawnBoundsMin");
             public static int spawnBoundsMax = Shader.PropertyToID("spawnBoundsMax");
             public static int bounceRate = Shader.PropertyToID("bounceRate");
@@ -25,9 +23,6 @@ namespace ComputeShaderBvhMeshHit.Sample
 
 
         public ComputeShader computeShader;
-        public BvhAsset bvhAsset;
-
-
         public int particleCount = 10000;
 
         [Range(0f, 1f)]
@@ -41,34 +36,27 @@ namespace ComputeShaderBvhMeshHit.Sample
         public bool bvhGizmoOnlyLeafNode;
 
         public GraphicsBuffer particleBuffer { get; protected set; }
-        GraphicsBuffer bvhBuffer;
-        GraphicsBuffer triangleBuffer;
+
+
+        BvhHelperBehaviour bvhHelper;
 
 
         #region Unity
 
         void Start()
         {
+            bvhHelper = GetComponent<BvhHelperBehaviour>();
             CreateParticleBuffer();
-            CreateBvhBuffer();
         }
 
         void OnDestroy()
         {
             if (particleBuffer != null) particleBuffer.Dispose();
-            if (bvhBuffer != null) bvhBuffer.Dispose();
-            if (triangleBuffer != null) triangleBuffer.Dispose();
         }
 
         void Update()
         {
             DispatchParticle();
-        }
-
-
-        void OnDrawGizmosSelected()
-        {
-            bvhAsset.DrwaGizmo(bvhGizmoDepth, bvhGizmoOnlyLeafNode);
         }
 
         #endregion
@@ -99,19 +87,13 @@ namespace ComputeShaderBvhMeshHit.Sample
             datas.Dispose();
         }
 
-        void CreateBvhBuffer()
-        {
-            (bvhBuffer, triangleBuffer) = bvhAsset.CreateBuffers();
-        }
-
-
         private void DispatchParticle()
         {
             var kernel = computeShader.FindKernel(ShaderParam.KernelUpdate);
 
+            bvhHelper.SetBuffersToComputShader(computeShader, kernel);
+
             computeShader.SetBuffer(kernel, ShaderParam.particleBuffer, particleBuffer);
-            computeShader.SetBuffer(kernel, ShaderParam.bvhBuffer, bvhBuffer);
-            computeShader.SetBuffer(kernel, ShaderParam.triangleBuffer, triangleBuffer);
             computeShader.SetVector(ShaderParam.spawnBoundsMin, spawnBounds.min);
             computeShader.SetVector(ShaderParam.spawnBoundsMax, spawnBounds.max);
             computeShader.SetFloat(ShaderParam.bounceRate, bounceRate);

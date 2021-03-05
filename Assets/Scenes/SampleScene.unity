@@ -133,6 +133,7 @@ GameObject:
   m_Component:
   - component: {fileID: 432840065}
   - component: {fileID: 432840064}
+  - component: {fileID: 432840067}
   - component: {fileID: 432840066}
   m_Layer: 0
   m_Name: Particle
@@ -154,7 +155,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: 77fd130945d99a8459a49074464dc947, type: 3}
-  bvhAsset: {fileID: 11400000, guid: 2c608b7122767e447b74bcc4e0a6bfb0, type: 2}
   particleCount: 2000000
   bounceRate: 0.3
   spawnBounds:
@@ -192,6 +192,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: 3acb33b1bcf7ec84dbae1edc3069db84, type: 2}
   size: 0.05
+--- !u!114 &432840067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432840063}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf050c5f9bce7f643a72855c95127f36, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bvhAsset: {fileID: 11400000, guid: 2c608b7122767e447b74bcc4e0a6bfb0, type: 2}
+  gizmoDepth: 0
+  gizmoOnlyLeafNode: 0
 --- !u!1 &653260035
 GameObject:
   m_ObjectHideFlags: 0
