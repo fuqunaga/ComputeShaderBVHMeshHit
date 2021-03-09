@@ -31,7 +31,15 @@ namespace ComputeShaderBvhMeshHit.Editor
             GUI.enabled = (meshObjectRoot != null) && (splitCount > 0);
             if (GUILayout.Button("Build"))
             {
-                var path = EditorUtility.SaveFilePanel("Save Bvh asset", Path.GetDirectoryName(lastPath) ?? "Assets", Path.GetFileName(lastPath) ?? "bvhAsset", "asset");
+                var directory = "Assets";
+                var defaultName = "bvhAsset";
+                if ( !string.IsNullOrEmpty(lastPath))
+                {
+                    directory = Path.GetDirectoryName(lastPath);
+                    defaultName = Path.GetFileName(lastPath);
+                }
+
+                var path = EditorUtility.SaveFilePanel("Save Bvh asset",  directory, defaultName, "asset");
                 if (!string.IsNullOrEmpty(path))
                 {
                     lastPath = path;
@@ -48,7 +56,8 @@ namespace ComputeShaderBvhMeshHit.Editor
                     bvhAsset.bvhDatas = bvhDatas;
                     bvhAsset.triangles = triangles;
 
-                    AssetDatabase.Refresh();
+                    EditorUtility.SetDirty(bvhAsset);
+                    AssetDatabase.SaveAssets();
                     EditorGUIUtility.PingObject(bvhAsset);
                 }
             }
