@@ -17,7 +17,7 @@ Add the following address to UnitPackageManager.
 1. Set `meshObjectRoot` object.
 2. **Build** to create BvhAsset.
 
-### CSharp
+### C#
 1. Put BvhHelperBehaviour to the Hierarchy.
 1. Set BvhAsset.
 1. Call `BvhHelperBehaviour.SetBuffersToComputeShader()`.
