@@ -23,7 +23,7 @@ Add the following address to UnitPackageManager.
 1. Call `BvhHelperBehaviour.SetBuffersToComputeShader()`.
 
 ### ComputeShader
-1. Add the following include statement to your ComputeShader.
+1. Add the following include statement to your ComputeShader.  
 `#include "Packages/ga.fuquna.computeshaderbvhmeshhit/Bvh.hlsl"`
 1. Call `TraverseBvh()` to detect a mesh hit.
 
