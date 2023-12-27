@@ -22,9 +22,9 @@ namespace ComputeShaderBvhMeshHit
             public BvhNode left;
             public BvhNode right;
 
-            public List<int> triangleIndexs;
+            public List<int> triangleIndices;
 
-            public bool IsLeaf => triangleIndexs != null;
+            public bool IsLeaf => triangleIndices != null;
         }
 
         #endregion
@@ -35,13 +35,13 @@ namespace ComputeShaderBvhMeshHit
             var triangles = CreateTriangles(rootMeshObject);
             var rootNode = CreateBvh(triangles, splitCount);
 
-            var (bvhDatas, triangleIndexes) = CreatteBvhDatas(rootNode);
+            var (bvhDataList, triangleIndexes) = CreatteBvhDatas(rootNode);
             var sortedTriangles = triangleIndexes.Select(idx => triangles[idx]).ToList();
 
-            return (bvhDatas, sortedTriangles);
+            return (bvhDataList, sortedTriangles);
         }
 
-        static List<Triangle> CreateTriangles(GameObject rootMeshObject)
+        private static List<Triangle> CreateTriangles(GameObject rootMeshObject)
         {
             var meshFilters = rootMeshObject.GetComponentsInChildren<MeshFilter>();
 
@@ -73,8 +73,7 @@ namespace ComputeShaderBvhMeshHit
         }
 
 
-        
-        static BvhNode CreateBvh(List<Triangle> triangles, int splitCount)
+        private static BvhNode CreateBvh(List<Triangle> triangles, int splitCount)
         {
             BvhNode rootNode;
 
@@ -104,19 +103,8 @@ namespace ComputeShaderBvhMeshHit
         }
 
 
-
-        static BvhNode CreateBvhRecursive(NativeSlice<TriangleBounds> triangleBoundsArray, int splitCount, int recursiveCount = 0)
+        private static BvhNode CreateBvhRecursive(NativeSlice<TriangleBounds> triangleBoundsArray, int splitCount, int recursiveCount = 0)
         {
-            static BvhNode CreateBvhNodeLeaf(NativeSlice<TriangleBounds> triangleBoundsArray)
-            {
-                return new BvhNode()
-                {
-                    bounds = CalcBounds(triangleBoundsArray),
-                    triangleIndexs = triangleBoundsArray.Select(n => n.triangleIndex).ToList()
-                };
-            }
-
-
             // Find smallest cost split
             // Select Axis  0 = X, 1 = Y, 2 = Z
             var bestSplit = 0f;
@@ -198,10 +186,19 @@ namespace ComputeShaderBvhMeshHit
             }
 
             return ret;
+
+            static BvhNode CreateBvhNodeLeaf(NativeSlice<TriangleBounds> triangleBoundsArray)
+            {
+                return new BvhNode()
+                {
+                    bounds = CalcBounds(triangleBoundsArray),
+                    triangleIndices = triangleBoundsArray.Select(n => n.triangleIndex).ToList()
+                };
+            }
         }
 
 
-        static Bounds CalcBounds(NativeSlice<TriangleBounds> triangleBoundsArray)
+        private static Bounds CalcBounds(NativeSlice<TriangleBounds> triangleBoundsArray)
         {
             var min = Vector3.one * float.MaxValue;
             var max = Vector3.one * float.MinValue;
@@ -218,7 +215,7 @@ namespace ComputeShaderBvhMeshHit
 
         // SAH(Surface Area Heuristics)
         // the current bbox has a cost of (number of triangles) * surfaceArea of C = N * SA
-        static (Bounds, float) CalcBoundsAndSAH(NativeSlice<TriangleBounds> triangleBoundsArray)
+        private static (Bounds, float) CalcBoundsAndSAH(NativeSlice<TriangleBounds> triangleBoundsArray)
         {
             var bounds = CalcBounds(triangleBoundsArray);
 
@@ -229,7 +226,7 @@ namespace ComputeShaderBvhMeshHit
         }
 
 
-        static (NativeSlice<TriangleBounds> left, NativeSlice<TriangleBounds> right) SplitLR(NativeSlice<TriangleBounds> triBoundsArray, int axis, float split, ref NativeArray<TriangleBounds> leftBuf, ref NativeArray<TriangleBounds> rightBuf)
+        private static (NativeSlice<TriangleBounds> left, NativeSlice<TriangleBounds> right) SplitLR(NativeSlice<TriangleBounds> triBoundsArray, int axis, float split, ref NativeArray<TriangleBounds> leftBuf, ref NativeArray<TriangleBounds> rightBuf)
         {
             var leftCount = 0;
             var rightCount = 0;
@@ -252,8 +249,7 @@ namespace ComputeShaderBvhMeshHit
         }
 
 
-
-        static (List<BvhData>, List<int>) CreatteBvhDatas(BvhNode node)
+        private static (List<BvhData>, List<int>) CreatteBvhDatas(BvhNode node)
         {
             var datas = new List<BvhData>();
             var triangleIndexes = new List<int>();
@@ -264,7 +260,7 @@ namespace ComputeShaderBvhMeshHit
 
         }
 
-        static void CreatteBvhDatasRecursive(BvhNode node, List<BvhData> datas, List<int> triangleIndexes)
+        private static void CreatteBvhDatasRecursive(BvhNode node, List<BvhData> datas, List<int> triangleIndexes)
         {
             var data = new BvhData()
             {
@@ -279,10 +275,10 @@ namespace ComputeShaderBvhMeshHit
             if (node.IsLeaf)
             {
                 var idx = triangleIndexes.Count;
-                triangleIndexes.AddRange(node.triangleIndexs);
+                triangleIndexes.AddRange(node.triangleIndices);
 
                 data.triangleIdx = idx;
-                data.triangleCount = node.triangleIndexs.Count;
+                data.triangleCount = node.triangleIndices.Count;
 
                 datas.Add(data);
             }

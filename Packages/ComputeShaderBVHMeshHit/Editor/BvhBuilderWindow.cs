@@ -53,7 +53,7 @@ namespace ComputeShaderBvhMeshHit.Editor
                         bvhAsset = CreateInstance<BvhAsset>();
                         AssetDatabase.CreateAsset(bvhAsset, relativePath);
                     }
-                    bvhAsset.bvhDatas = bvhDatas;
+                    bvhAsset.bvhDataList = bvhDatas;
                     bvhAsset.triangles = triangles;
 
                     EditorUtility.SetDirty(bvhAsset);

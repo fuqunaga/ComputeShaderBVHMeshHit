@@ -1,20 +1,21 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 
 namespace ComputeShaderBvhMeshHit
 {
     public class BvhAsset : ScriptableObject
     {
-        public List<BvhData> bvhDatas;
+        [FormerlySerializedAs("bvhDatas")] public List<BvhData> bvhDataList;
         public List<Triangle> triangles;
 
 
         public (GraphicsBuffer, GraphicsBuffer) CreateBuffers()
         {
-            var bvhBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bvhDatas.Count, Marshal.SizeOf<BvhData>());
-            bvhBuffer.SetData(bvhDatas);
+            var bvhBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bvhDataList.Count, Marshal.SizeOf<BvhData>());
+            bvhBuffer.SetData(bvhDataList);
 
             var triangleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, triangles.Count, Marshal.SizeOf<Triangle>());
             triangleBuffer.SetData(triangles);
@@ -23,19 +24,19 @@ namespace ComputeShaderBvhMeshHit
         }
 
 
-        public void DrwaGizmo(int gizmoDepth, bool gizmoOnlyLeafNode = false)
+        public void DrawGizmo(int gizmoDepth, bool gizmoOnlyLeafNode = false)
         {
-            if (bvhDatas != null)
+            if (bvhDataList != null)
             {
                 DrawBvhGizmo(0, gizmoDepth, gizmoOnlyLeafNode);
             }
         }
 
-        void DrawBvhGizmo(int idx, int gizmoDepth, bool gizmoOnlyLeafNode, int recursiveCount = 0)
+        private void DrawBvhGizmo(int idx, int gizmoDepth, bool gizmoOnlyLeafNode, int recursiveCount = 0)
         {
-            if (idx < 0 || bvhDatas.Count <= idx) return;
+            if (idx < 0 || bvhDataList.Count <= idx) return;
 
-            var data = bvhDatas[idx];
+            var data = bvhDataList[idx];
 
             if (recursiveCount == gizmoDepth)
             {

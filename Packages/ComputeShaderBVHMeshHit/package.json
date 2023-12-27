@@ -1,8 +1,8 @@
 {
   "name": "ga.fuquna.computeshaderbvhmeshhit",
   "displayName": "ComputeShaderBVHMeshHit",
-  "version": "1.0.0",
-  "unity": "2020.2",
+  "version": "1.0.1",
+  "unity": "2022.3",
   "keywords": [
     "ComputeShader",
     "BVH"

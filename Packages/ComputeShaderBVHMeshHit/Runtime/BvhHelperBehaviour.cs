@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace ComputeShaderBvhMeshHit
@@ -15,31 +16,34 @@ namespace ComputeShaderBvhMeshHit
         public int gizmoDepth;
         public bool gizmoOnlyLeafNode;
 
-        GraphicsBuffer bvhBuffer;
-        GraphicsBuffer triangleBuffer;
+        private GraphicsBuffer _bvhBuffer;
+        private GraphicsBuffer _triangleBuffer;
 
 
-        void Start()
+        private void Start()
         {
-            (bvhBuffer, triangleBuffer) = bvhAsset.CreateBuffers();
+            (_bvhBuffer, _triangleBuffer) = bvhAsset.CreateBuffers();
         }
 
-        void OnDestroy()
+        private void OnDestroy()
         {
-            if (bvhBuffer != null) bvhBuffer.Release();
-            if (triangleBuffer != null) triangleBuffer.Release();
+            _bvhBuffer?.Release();
+            _triangleBuffer?.Release();
         }
 
-        void OnDrawGizmosSelected()
+        private void OnDrawGizmosSelected()
         {
-            if (bvhAsset != null) bvhAsset.DrwaGizmo(gizmoDepth, gizmoOnlyLeafNode);
+            if (bvhAsset != null) bvhAsset.DrawGizmo(gizmoDepth, gizmoOnlyLeafNode);
         }
 
+        [Obsolete("Use SetBuffersToComputeShader instead")]
+        // ReSharper disable once IdentifierTypo
+        public void SetBuffersToComputShader(ComputeShader cs, int kernel) => SetBuffersToComputeShader(cs, kernel);
 
-        public void SetBuffersToComputShader(ComputeShader cs, int kernel)
+        public void SetBuffersToComputeShader(ComputeShader cs, int kernel)
         {
-            cs.SetBuffer(kernel, ShaderParam.bvhBuffer, bvhBuffer);
-            cs.SetBuffer(kernel, ShaderParam.triangleBuffer, triangleBuffer);
+            cs.SetBuffer(kernel, ShaderParam.bvhBuffer, _bvhBuffer);
+            cs.SetBuffer(kernel, ShaderParam.triangleBuffer, _triangleBuffer);
         }
     }
 }
