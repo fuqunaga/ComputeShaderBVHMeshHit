@@ -7,7 +7,9 @@ Unity ComputeShader implementation of [BVH(Bounding Volume Hierarchy)](https://e
 # Installation
 
 Add the following address to UnitPackageManager.  
-`https://github.com/fuqunaga/ComputeShaderBVHMeshHit.git?path=/Packages/ComputeShaderBVHMeshHit`
+```
+https://github.com/fuqunaga/ComputeShaderBVHMeshHit.git?path=/Packages/ComputeShaderBVHMeshHit
+```
 
 
 # How to use
