@@ -220,7 +220,7 @@ namespace ComputeShaderBvhMeshHit
             var bounds = CalcBounds(triangleBoundsArray);
 
             var size = bounds.size;
-            var sah = triangleBoundsArray.Length * (size.x * size.y + size.x * size.y + size.y * size.z);
+            var sah = triangleBoundsArray.Length * (size.x * size.y + size.y * size.z + size.z * size.x);
 
             return (bounds, sah);
         }
